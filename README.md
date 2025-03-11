@@ -19,9 +19,6 @@
 Django는 저희 프로젝트의 백엔드 프레임워크입니다. 위 부분들도 꼭 아셔야 합니다.  
 **추천 자료:** 유튜브나 교재에 Django 입문 강좌가 잘 되어 있습니다.
 
-## 3. HTML, CSS, JavaScript (기본)
-프론트엔드는 Vue.js로 개발하지만, 기본적인 HTML, CSS, JavaScript에 대한 이해도 필수입니다. 그래야 웹 페이지 구조와 스타일을 이해하고 프론트엔드와 연동할 수 있습니다.
-
 ## 4. API 개발 **제일 중요**
 Django REST Framework를 사용하여 API를 구현할 예정이니. GET, POST, PUT, DELETE 요청 처리 방법 (JSON 형식)에 대한 이해 또한 필수입니다.
 

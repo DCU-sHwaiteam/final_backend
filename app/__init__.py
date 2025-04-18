@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 import os
 
-load_dotenv()
 
 db = SQLAlchemy()
 

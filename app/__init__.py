@@ -3,8 +3,8 @@ from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from flask_cors import CORS
+from flask_migrate import Migrate
 import os
-
 
 db = SQLAlchemy()
 
@@ -21,9 +21,10 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
      
-    print("🧩 SQLALCHEMY_DATABASE_URI =", app.config['SQLALCHEMY_DATABASE_URI'])
+    print("SQLALCHEMY_DATABASE_URI =", app.config['SQLALCHEMY_DATABASE_URI'])
  
     db.init_app(app)
+    Migrate(app, db)
     CORS(app, supports_credentials=True)
 
     from app.routes.attendance import bp as attendance_bp
@@ -34,5 +35,8 @@ def create_app():
     
     from app.routes.club import bp as club_bp
     app.register_blueprint(club_bp)
-   
+
+    from app.routes.clubmembership import bp as clubmembership_bp
+    app.register_blueprint(clubmembership_bp)   
+    
     return app

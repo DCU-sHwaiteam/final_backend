@@ -16,6 +16,7 @@ class Club(db.Model):
     activity_schedule = db.Column(db.String(100))
     tags = db.Column(db.String(255))
     description = db.Column(db.Text)
+    attendance_password = db.Column(db.String(100), nullable=True)
 
     def to_dict(self):
         return {

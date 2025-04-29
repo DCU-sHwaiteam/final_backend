@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, session
 from app.models.attendance import Attendance
 from app.models.user import User
@@ -31,11 +30,11 @@ def record_attendance(current_user):
     status = data.get('status', '출석')  # 기본값
 
     if not club_id or not input_password:
-        return jsonify({'message': '클럽 ID와 출석 비밀번호가 필요합니다.'}), 400
+        return jsonify({'message': '동아리 ID와 출석 비밀번호가 필요합니다.'}), 400
 
     club = Club.query.get(club_id)
     if not club:
-        return jsonify({'message': '해당 클럽이 존재하지 않습니다.'}), 404
+        return jsonify({'message': '해당 동아리가 존재하지 않습니다.'}), 404
 
     if club.attendance_password != input_password:
         return jsonify({'message': '출석 비밀번호가 틀립니다.'}), 403
@@ -98,7 +97,7 @@ def admin_attendance_all(current_user):
 
     return jsonify({'attendance': all_data}), 200
 
-@club_bp.route('/clubs/<int:club_id>/attendance-password', methods=['PATCH'])
+@bp.route('/clubs/<int:club_id>/attendance-password', methods=['PATCH'])
 @login_required
 def update_attendance_password(club_id):
     data = request.json
@@ -109,7 +108,7 @@ def update_attendance_password(club_id):
 
     club = Club.query.get(club_id)
     if not club:
-        return jsonify({'message': '해당 클럽을 찾을 수 없습니다.'}), 404
+        return jsonify({'message': '해당 동아리를 찾을 수 없습니다.'}), 404
 
     if club.leader_email != current_user.email:
         return jsonify({'message': '출석 비밀번호를 수정할 권한이 없습니다.'}), 403

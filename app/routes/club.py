@@ -3,6 +3,7 @@
 from flask import Blueprint, make_response, request, jsonify
 from app.models.club import Club
 from app.models.user import User
+from app.models.clubmembership import ClubMembership
 from sqlalchemy import func
 import json
 from app import db
@@ -57,6 +58,15 @@ def create_club():
     db.session.add(new_club)
     db.session.commit()
 
+  # 동아리장도 ClubMembership에 status='approved'로 추가!
+    club_leader_membership = ClubMembership(
+        user_id=user.id,
+        club_id=new_club.id,
+        status='approved'
+    )
+    db.session.add(club_leader_membership)
+    db.session.commit()
+    
     return jsonify({"success": True, "club": new_club.to_dict()}), 201
     
 

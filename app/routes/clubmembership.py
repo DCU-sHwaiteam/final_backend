@@ -98,3 +98,27 @@ def approve_membership():
     logger.info("승인 완료:", membership.to_dict())
     return json_response({"success": True, "membership": membership.to_dict()})
 
+# 동아리 가입 신청자 목록 조회
+@bp.route('/api/clubs/<int:club_id>/applications', methods=['GET'])
+def get_applications(club_id):
+    applications = ClubMembership.query.filter_by(club_id=club_id, status='pending').all()
+    users = [User.query.get(a.user_id).to_dict() for a in applications]
+    return jsonify(users), 200
+
+# 동아리 멤버 목록 조회
+@bp.route('/api/clubs/<int:club_id>/members', methods=['GET'])
+def get_club_members(club_id):
+    memberships = ClubMembership.query.filter_by(club_id=club_id, status='approved').all()
+    users = [User.query.get(m.user_id).to_dict() for m in memberships]
+    return jsonify(users), 200
+
+# 동아리 멤버 삭제
+@bp.route('/api/clubs/<int:club_id>/members/<int:user_id>', methods=['DELETE'])
+def remove_member(club_id, user_id):
+    membership = ClubMembership.query.filter_by(club_id=club_id, user_id=user_id).first()
+    if not membership:
+        return jsonify({'success': False, 'message': '해당 멤버가 없습니다.'}), 404
+    db.session.delete(membership)
+    db.session.commit()
+    return jsonify({'success': True})
+

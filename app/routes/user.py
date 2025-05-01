@@ -69,3 +69,14 @@ def login():
 def logout():
     session.clear()
     return jsonify({"message": "로그아웃 완료!"}), 200
+
+
+#  로그인한 사용자 정보 조회
+@bp.route('/current-user', methods=['GET'])
+def current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'message': '로그인이 필요합니다.'}), 401
+    user = User.query.get(user_id)
+    return jsonify({'success': True, 'user': user.to_dict()})
+

@@ -46,8 +46,8 @@ def join_club():
     # 회원과 동아리 존재 여부 확인
     user = User.query.get(user_id)
     club = Club.query.get(club_id)
-    logger.info("user 존재 여부:", bool(user))
-    logger.info("club 존재 여부:", bool(club))
+    logger.info(f"user 존재 여부: {bool(user)}")
+    logger.info(f"club 존재 여부: {bool(club)}")
 
     if not user or not club:
         logger.info("존재하지 않는 user 또는 club")
@@ -55,7 +55,7 @@ def join_club():
 
     # 이미 가입된 회원인지 확인
     existing_membership = ClubMembership.query.filter_by(user_id=user_id, club_id=club_id).first()
-    logger.info("기존 가입 여부:", bool(existing_membership))
+    logger.info(f"기존 가입 여부: {bool(existing_membership)}")
     if existing_membership:
          return json_response({"success": False, "message": "이미 가입된 회원입니다."}, 409)
 
@@ -63,24 +63,24 @@ def join_club():
     membership = ClubMembership(user_id=user_id, club_id=club_id)
     db.session.add(membership)
     db.session.commit()
-    logger.info("가입 성공:", membership.to_dict())
+    logger.info(f"가입 성공: {membership.to_dict()}")
     return json_response({"success": True, "membership": membership.to_dict()}, 201)
 
 # 동아리장 승인 API (POST)
 @bp.route('/api/approve-membership', methods=['POST'])
 def approve_membership():
     data = request.get_json()
-    logger.info("[approve_membership] 수신 데이터:", data)
+    logger.info(f"[approve_membership] 수신 데이터 {data}")
     user_id = data.get('user_id')
     club_id = data.get('club_id')
 
     # 동아리장 이메일 확인
     club = Club.query.get(club_id)
-    logger.info("동아리 존재 여부:", bool(club))
+    logger.info(f"동아리 존재 여부: {bool(club)}")
     if not club:
         return json_response({"success": False, "message": "동아리를 찾을 수 없습니다."}, 404)
-    logger.info("실제 동아리장:", club.leader_email)
-    logger.info("요청자 이메일:", leader_email)
+    logger.info(f"실제 동아리장: {club.leader_email}")
+    logger.info(f"요청자 이메일: {leader_email}")
 
     # 동아리장만 승인 가능
     if club.leader_email != data.get('leader_email'):
@@ -88,14 +88,14 @@ def approve_membership():
 
     # 해당 회원의 가입 요청 상태가 'pending'인지 확인
     membership = ClubMembership.query.filter_by(user_id=user_id, club_id=club_id).first()
-    logger.info("가입 요청 존재 여부:", bool(membership))
+    logger.info(f"가입 요청 존재 여부: {bool(membership)}")
     if not membership:
          return json_response({"success": False, "message": "가입 요청을 찾을 수 없습니다."}, 404)
 
     # 상태 변경: 'approved'로 승인
     membership.status = 'approved'
     db.session.commit()
-    logger.info("승인 완료:", membership.to_dict())
+    logger.info(f"승인 완료: {membership.to_dict()}")
     return json_response({"success": True, "membership": membership.to_dict()})
 
 # 동아리 가입 신청자 목록 조회

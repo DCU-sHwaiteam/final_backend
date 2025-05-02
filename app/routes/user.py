@@ -59,6 +59,7 @@ def login():
             return jsonify({"message": "아이디 또는 비밀번호가 올바르지 않습니다."}), 401
 
         session['user_id'] = user.id
+        session['user_email'] = user.email
         return jsonify({"message": "로그인 성공!"}), 200
 
     except Exception as e:

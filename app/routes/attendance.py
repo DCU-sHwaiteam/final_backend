@@ -183,3 +183,29 @@ def mark_attendance(club_id):
     db.session.commit()
     return jsonify({"success": True, "message": "출석 처리되었습니다."}), 200
 
+# 출석 명부 조회 (동아리장용)
+@bp.route('/attendance/list', methods=['GET'])
+@login_required
+def get_attendance_list(current_user):
+    club_id = request.args.get('club_id', type=int)
+    week = request.args.get('week', type=int)
+
+    if not club_id or not week:
+        return jsonify({"message": "동아리 ID와 주차(week)는 필수입니다."}), 400
+
+    # 해당 출석 회차 확인
+    attendance = Attendance.query.filter_by(club_id=club_id, week=week).first()
+    if not attendance:
+        return jsonify({"message": "해당 주차의 출석이 존재하지 않습니다."}), 404
+
+    records = AttendanceRecord.query.filter_by(attendance_id=attendance.id).all()
+
+    result = [
+        {
+            "user_id": r.user_id,
+            "status": r.status,
+            "timestamp": r.timestamp.isoformat() if r.timestamp else None
+        } for r in records
+    ]
+
+    return jsonify({"attendance": result}), 200

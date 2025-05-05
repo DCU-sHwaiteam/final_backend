@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, session
-from app.models.attendance import Attendance
+from app.models.attendance import Attendance, AttendanceRecord
 from app.models.user import User
 from app import db
 from datetime import datetime
 from sqlalchemy import and_
 from functools import wraps
+import random
 
 bp = Blueprint('attendance', __name__, url_prefix='/api')
 
@@ -117,3 +118,68 @@ def update_attendance_password(club_id):
     db.session.commit()
 
     return jsonify({'message': '출석 비밀번호가 수정되었습니다.'}), 200
+
+# 출석 리스트 조회
+@bp.route('/api/clubs/<int:club_id>/attendance', methods=['GET'])
+def get_attendance_list(club_id):
+    attendances = Attendance.query.filter_by(club_id=club_id).all()
+    return jsonify([a.to_dict() for a in attendances]), 200
+
+# 출석 생성 (동아리장만 가능)
+@bp.route('/api/clubs/<int:club_id>/attendance', methods=['POST'])
+def create_attendance(club_id):
+    data = request.get_json()
+    week = int(data.get('week'))
+    att_type = data.get('type')
+    time = data.get('time')
+    pin = str(random.randint(1000, 9999)) if att_type == 'PIN' else None
+
+    # 이미 해당 주차 출석이 있으면 중복 생성 방지
+    if Attendance.query.filter_by(club_id=club_id, week=week).first():
+        return jsonify({"success": False, "message": "이미 생성된 출석입니다."}), 409
+
+    new_attendance = Attendance(
+        club_id=club_id,
+        week=week,
+        type=att_type,
+        pin=pin,
+        time=time
+    )
+    db.session.add(new_attendance)
+    db.session.commit()
+    return jsonify(new_attendance.to_dict()), 201
+
+# 출석 체크 (멤버)
+@bp.route('/api/clubs/<int:club_id>/attendance/mark', methods=['POST'])
+def mark_attendance(club_id):
+    data = request.get_json()
+    user_id = session.get('user_id')
+    week = int(data.get('week'))
+    pin = data.get('pin')
+
+    if not user_id:
+        return jsonify({"success": False, "message": "로그인이 필요합니다."}), 401
+
+    attendance = Attendance.query.filter_by(club_id=club_id, week=week).first()
+    if not attendance:
+        return jsonify({"success": False, "message": "출석 정보를 찾을 수 없습니다."}), 404
+
+    # PIN 방식일 때만 PIN 체크
+    if attendance.type == 'PIN':
+        if not pin or pin != attendance.pin:
+            return jsonify({"success": False, "message": "잘못된 PIN 번호입니다."}), 400
+
+    # 이미 출석 기록이 있는지 확인
+    existing = AttendanceRecord.query.filter_by(user_id=user_id, attendance_id=attendance.id).first()
+    if existing:
+        return jsonify({"success": False, "message": "이미 출석 처리되었습니다."}), 409
+
+    record = AttendanceRecord(
+        user_id=user_id,
+        attendance_id=attendance.id,
+        status='출석'
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({"success": True, "message": "출석 처리되었습니다."}), 200
+

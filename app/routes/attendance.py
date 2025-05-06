@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, session
 from app.models.attendance import Attendance, AttendanceRecord
 from app.models.user import User
+from app.models.club import Club
 from app import db
 from datetime import datetime
 from sqlalchemy import and_
@@ -9,7 +10,7 @@ import random
 
 bp = Blueprint('attendance', __name__, url_prefix='/api')
 
-#세션 기반 인증 데코레이터
+# 세션 기반 인증 데코레이터
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -28,7 +29,7 @@ def record_attendance(current_user):
     data = request.json
     club_id = data.get('club_id')
     input_password = data.get('attendance_password')
-    status = data.get('status', '출석')  # 기본값
+    status = data.get('status', '출석')
 
     if not club_id or not input_password:
         return jsonify({'message': '동아리 ID와 출석 비밀번호가 필요합니다.'}), 400
@@ -61,13 +62,11 @@ def record_attendance(current_user):
 
     return jsonify({'message': '출석 등록 완료!', 'status': status}), 201
 
-
 # 본인 출석 목록 조회
 @bp.route('/attendance/history', methods=['GET'])
 @login_required
 def attendance_history(current_user):
     records = Attendance.query.filter_by(user_id=current_user.id).order_by(Attendance.timestamp.desc()).all()
-
     history = [
         {
             'date': record.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
@@ -75,7 +74,6 @@ def attendance_history(current_user):
         }
         for record in records
     ]
-
     return jsonify({'attendance': history}), 200
 
 # 관리자 전체 출석 기록 조회
@@ -86,7 +84,6 @@ def admin_attendance_all(current_user):
         return jsonify({'message': '관리자 권한이 없습니다.'}), 403
 
     records = Attendance.query.order_by(Attendance.timestamp.desc()).all()
-
     all_data = [
         {
             'user_id': record.user_id,
@@ -95,7 +92,6 @@ def admin_attendance_all(current_user):
         }
         for record in records
     ]
-
     return jsonify({'attendance': all_data}), 200
 
 @bp.route('/clubs/<int:club_id>/attendance-password', methods=['PATCH'])
@@ -116,17 +112,16 @@ def update_attendance_password(club_id):
 
     club.attendance_password = new_password
     db.session.commit()
-
     return jsonify({'message': '출석 비밀번호가 수정되었습니다.'}), 200
 
-# 출석 리스트 조회
-@bp.route('/api/clubs/<int:club_id>/attendance', methods=['GET'])
+# 출석 리스트 조회 (동아리별, 주차별)
+@bp.route('/clubs/<int:club_id>/attendance', methods=['GET'])
 def get_attendance_list(club_id):
     attendances = Attendance.query.filter_by(club_id=club_id).all()
     return jsonify([a.to_dict() for a in attendances]), 200
 
 # 출석 생성 (동아리장만 가능)
-@bp.route('/api/clubs/<int:club_id>/attendance', methods=['POST'])
+@bp.route('/clubs/<int:club_id>/attendance', methods=['POST'])
 def create_attendance(club_id):
     data = request.get_json()
     week = int(data.get('week'))
@@ -134,7 +129,6 @@ def create_attendance(club_id):
     time = data.get('time')
     pin = str(random.randint(1000, 9999)) if att_type == 'PIN' else None
 
-    # 이미 해당 주차 출석이 있으면 중복 생성 방지
     if Attendance.query.filter_by(club_id=club_id, week=week).first():
         return jsonify({"success": False, "message": "이미 생성된 출석입니다."}), 409
 
@@ -150,7 +144,7 @@ def create_attendance(club_id):
     return jsonify(new_attendance.to_dict()), 201
 
 # 출석 체크 (멤버)
-@bp.route('/api/clubs/<int:club_id>/attendance/mark', methods=['POST'])
+@bp.route('/clubs/<int:club_id>/attendance/mark', methods=['POST'])
 def mark_attendance(club_id):
     data = request.get_json()
     user_id = session.get('user_id')
@@ -164,12 +158,10 @@ def mark_attendance(club_id):
     if not attendance:
         return jsonify({"success": False, "message": "출석 정보를 찾을 수 없습니다."}), 404
 
-    # PIN 방식일 때만 PIN 체크
     if attendance.type == 'PIN':
         if not pin or pin != attendance.pin:
             return jsonify({"success": False, "message": "잘못된 PIN 번호입니다."}), 400
 
-    # 이미 출석 기록이 있는지 확인
     existing = AttendanceRecord.query.filter_by(user_id=user_id, attendance_id=attendance.id).first()
     if existing:
         return jsonify({"success": False, "message": "이미 출석 처리되었습니다."}), 409
@@ -183,23 +175,21 @@ def mark_attendance(club_id):
     db.session.commit()
     return jsonify({"success": True, "message": "출석 처리되었습니다."}), 200
 
-# 출석 명부 조회 (동아리장용)
+# 출석 명부 조회 (동아리장용) → 함수명 변경!
 @bp.route('/attendance/list', methods=['GET'])
 @login_required
-def get_attendance_list(current_user):
+def get_attendance_records(current_user):  # 함수명 고유하게!
     club_id = request.args.get('club_id', type=int)
     week = request.args.get('week', type=int)
 
     if not club_id or not week:
         return jsonify({"message": "동아리 ID와 주차(week)는 필수입니다."}), 400
 
-    # 해당 출석 회차 확인
     attendance = Attendance.query.filter_by(club_id=club_id, week=week).first()
     if not attendance:
         return jsonify({"message": "해당 주차의 출석이 존재하지 않습니다."}), 404
 
     records = AttendanceRecord.query.filter_by(attendance_id=attendance.id).all()
-
     result = [
         {
             "user_id": r.user_id,
@@ -207,5 +197,5 @@ def get_attendance_list(current_user):
             "timestamp": r.timestamp.isoformat() if r.timestamp else None
         } for r in records
     ]
-
     return jsonify({"attendance": result}), 200
+

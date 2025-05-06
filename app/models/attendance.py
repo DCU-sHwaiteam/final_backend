@@ -17,7 +17,8 @@ class Attendance(db.Model):
             "week": self.week,
             "type": self.type,
             "pin": self.pin,
-            "time": self.time
+            "time": self.time,
+            "status": "출석"
         }
 
 class AttendanceRecord(db.Model):
